@@ -10,11 +10,9 @@ import pandas as pd
 from datetime import datetime, timedelta
 from alive_progress import alive_bar
 import schedule 
+import logging
 
-
-_print=print
-def print(*args, **kw):
-    _print("[%s]" % (datetime.now()),*args, **kw)
+logging.basicConfig(level=logging.DEBUG)
 
 
 mage_auth = OAuth1(
@@ -38,7 +36,7 @@ mage_headers = {"Content-Type": "application/json"}
 ns_headers = {"Content-Type": "application/json", "prefer": "transient"}
 
 def getMissingCosts():
-    print ("Getting Magento Missing Costs...")
+    logging.debug("Getting Magento Missing Costs...")
     currentPage = 1
     lastPage = False
     all_missing_df = pd.DataFrame()
@@ -49,12 +47,12 @@ def getMissingCosts():
         product_paged_df = pd.json_normalize(products_data,"items")
 
         if product_paged_df.empty:
-            print ("Last page!")
+            logging.debug("Last page!")
             lastPage = True
         else:
             all_missing_df = pd.concat([all_missing_df, product_paged_df])
             missing_count = all_missing_df.shape[0]
-            print ("Magento Results Retrieved: " + str(missing_count))
+            logging.debug("Magento Results Retrieved: " + str(missing_count))
             currentPage += 1
 
     return all_missing_df
@@ -62,7 +60,7 @@ def getMissingCosts():
 
 
 def getNSCosts():
-    print ("Getting NS Item Costs...")
+    logging.debug("Getting NS Item Costs...")
     offset = 0
     totalResults = 0
     lastPage = False
@@ -76,7 +74,7 @@ def getNSCosts():
         costs_data = json.loads(costs_response.text)
         responseCount = costs_data["count"]
         totalResults += responseCount
-        print ("NS Results Retrieved: " + str(totalResults))
+        logging.debug("NS Results Retrieved: " + str(totalResults))
         if responseCount < 1000:
             lastPage = True
         else:
@@ -87,7 +85,7 @@ def getNSCosts():
     return all_costs_df
 
 def getNSKitCosts():
-    print ("Getting NS Kit Costs...")
+    logging.debug("Getting NS Kit Costs...")
     offset = 0
     totalResults = 0
     lastPage = False
@@ -99,7 +97,7 @@ def getNSKitCosts():
         costs_response = requests.post(NS_QUERY_URL, auth=ns_auth, headers=ns_headers, json=NS_QUERY)
         costs_data = json.loads(costs_response.text)
         responseCount = costs_data["count"]
-        print ("Items on this NS page: " + str(responseCount))
+        logging.debug("Items on this NS page: " + str(responseCount))
         if responseCount < 1000:
             lastPage = True
         else:
@@ -153,7 +151,7 @@ def processCosts():
     #Upload if any exist
     if filtered_costs.shape[0] > 0 :
 
-        print ("Uploading " + str(filtered_costs.shape[0]) + " cost records")
+        logging.debug("Uploading " + str(filtered_costs.shape[0]) + " cost records")
         #Generate upload JSON body from table
         upload_body = generateCostJSON(filtered_costs)
         MAGE_UPLOAD_URL = params.MAGE_URL + "/rest/async/bulk/V1/products"
@@ -161,14 +159,14 @@ def processCosts():
         upload_response = requests.post(MAGE_UPLOAD_URL, auth=mage_auth, headers=mage_headers, json=upload_body)
         upload_response_body = json.loads(upload_response.text)
         upload_uuid = upload_response_body["bulk_uuid"]
-        print ("Upload UUID " + upload_uuid)
+        logging.debug("Upload UUID " + upload_uuid)
     else :
-        print ("No new costs to upload!")
+        logging.debug("No new costs to upload!")
 
 
 def mail(args):
-    print ("NS Mage Sync app started, loading schedules...")
-    print (os.environ)
+    logging.debug("NS Mage Sync app started, loading schedules...")
+    logging.debug(os.environ)
     schedule.every().day.at("20:30").do(processCosts)
     while true:
         schedule.run_pending()
