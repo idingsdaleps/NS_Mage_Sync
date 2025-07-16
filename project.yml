@@ -1,5 +1,5 @@
 packages:
-  - name: Netsuite Magento Sync
+  - name: ns_mage_sync
     actions:
       - name: costs
         runtime: 'python:default'
