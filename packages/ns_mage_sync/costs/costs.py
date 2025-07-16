@@ -167,6 +167,8 @@ def processCosts():
 
 
 def mail(args):
+    print ("NS Mage Sync app started, loading schedules...")
+    print (os.environ)
     schedule.every().day.at("20:30").do(processCosts)
     while true:
         schedule.run_pending()
